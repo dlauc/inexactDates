@@ -1,4 +1,5 @@
 from datetime import datetime, timedelta
+from calendar import monthrange
 from scipy import stats
 from math import sqrt, log, exp, ceil
 import numpy as np
@@ -11,7 +12,7 @@ date_model = {
     'week',  # from Monday to Sunday; provide date,
     'month',  # provide year and month
     'quarter_year',  # provide year and month (any month in a quarter)
-    'season',  # winter, summer / provide year and month (any month in a season)
+    'season',  # winter, summer / provide year and month (month starting a season), only for North hemisphere
     'year',  # provide year
     'decade',  # provide year
     'century',  # provide year
@@ -87,6 +88,48 @@ class InexactDate:
             year_from, month_from, day_from = start.year, start.month, start.day
             end = start + timedelta(days=6)
             year_to, month_to, day_to = end.year, end.month, end.day
+        elif model == 'month':
+            if not year_from or not month_from:
+                raise ValueError('Please specify year and month ')
+            start = datetime(year_from, month_from, 1)
+            year_from, month_from, day_from = start.year, start.month, start.day
+            end = start + timedelta(monthrange(year_from, month_from)[1]-1)
+            year_to, month_to, day_to = end.year, end.month, end.day
+        elif model == 'quarter_year':
+            if not year_from or not month_from:
+                raise ValueError('Please specify year and month ')
+            start = datetime(year_from, max(filter(lambda i: i <= month_from, [1,4,7,10])), 1)
+            year_from, month_from, day_from = start.year, start.month, start.day
+            end = start + timedelta(monthrange(year_from, month_from)[1]) + \
+                  timedelta(monthrange(year_from, month_from + 1)[1]) + \
+                  timedelta(monthrange(year_from, month_from + 2)[1] - 1)
+            year_to, month_to, day_to = end.year, end.month, end.day
+        elif model == 'season':
+            #  TODO check usage of Winter YEAR
+            if not year_from or not month_from in (3,6,9,12):
+                raise ValueError('Please specify year and the first month of the season')
+            day_from = 21 if month_from == 9 else 23
+            start = datetime(year_from, month_from, day_from)
+            year_from, month_from, day_from = start.year, start.month, start.day
+            end = start + timedelta(81)
+            year_to, month_to, day_to = end.year, end.month, 22 if end.month == 9 else 20
+
+        elif model == 'year':
+            if not year_from:
+                raise ValueError('Please specify year')
+            year_from, month_from, day_from = year_from, 1, 1
+            year_to, month_to, day_to = year_from, 12, 31
+
+        elif model == 'decade':
+            if not year_from:
+                raise ValueError('Please specify year')
+            year_from, month_from, day_from = (year_from // 10)*10, 1, 1
+            year_to, month_to, day_to = (year_from // 10)*10+9, 12, 31
+        elif model == 'century':
+            if not year_from:
+                raise ValueError('Please specify year')
+            year_from, month_from, day_from = (year_from // 100)*100+1, 1, 1
+            year_to, month_to, day_to = (year_from // 100)*100+100, 12, 31
 
         self = object.__new__(cls)
 
