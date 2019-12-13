@@ -142,8 +142,11 @@ class InexactDate:
             fuzzy_plus_span = 10 * round(sqrt(span))  # extend for uncertainty to the both sides
             minv = distv.min() / 2
             lamb = -(log(0.01))/fuzzy_plus_span  # lambda parameter for exponential distribution that covers 99% probabilty mass
+
             expf = lambda x: lamb*exp(-1*lamb*x)
-            distvf = np.array(list(map(expf, range(fuzzy_plus_span)))) * uncertainty/2
+            distvf = np.array(list(map(expf, [a+0.5 for a in range(fuzzy_plus_span)]))) # middle values for a crude aprox to sum to 1
+            distvf = distvf / sum(distvf)
+            distvf = distvf * (uncertainty/2)
 
             # expand fuzzy_plus_span if the largest value if greater then the minimal value in distribution
             while distvf[0] > minv:
@@ -161,7 +164,5 @@ class InexactDate:
 
 if __name__ == '__main__':
     # test
-    dayf, dayd = InexactDate('date', 1066, 10, 1).fset
-    print(len(dayd))
-    weekf, weekd = InexactDate('week', 1066, 10, 1).fset
-    print(len(weekd))
+    dayd, dayf = InexactDate('date', 1066, 10, 1).fset
+    print(len(dayf))
