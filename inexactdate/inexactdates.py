@@ -153,15 +153,15 @@ class InexactDate:
         self._fset = np.zeros((span+2*fuzzy_plus_span))
         self._fset[fuzzy_plus_span:fuzzy_plus_span+span] = distv
         if fuzzy_plus_span>0:
-            self._fset[:fuzzy_plus_span] = distvf.flip()
+            self._fset[:fuzzy_plus_span] = np.flip(distvf, 0)
             self._fset[fuzzy_plus_span+span:] = distvf
 
-        self._first_nonnull_date = (first_day-fuzzy_plus_span).toordinal()
+        self._first_nonnull_date = (first_day - timedelta(days=fuzzy_plus_span)).toordinal()
 
 
 if __name__ == '__main__':
     # test
     dayf, dayd = InexactDate('date', 1066, 10, 1).fset
     print(len(dayd))
-    weekf, weekdd = InexactDate('week', 1066, 10, 1).fset
+    weekf, weekd = InexactDate('week', 1066, 10, 1).fset
     print(len(weekd))
