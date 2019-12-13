@@ -1,6 +1,6 @@
 from datetime import datetime, timedelta
 from scipy import stats
-from math import sqrt, log, exp
+from math import sqrt, log, exp, ceil
 import numpy as np
 
 # the most frequent models for constructing an inexact dates fuzzy set
@@ -139,7 +139,7 @@ class InexactDate:
         if self._certainty < 1:
             uncertainty = 1 - self._certainty
             # TODO find better span and probability distribution by empirical data
-            fuzzy_plus_span = 10 * round(sqrt(span))  # extend for uncertainty to the both sides
+            fuzzy_plus_span = ceil((10 * sqrt(span))/self._certainty)  # extend for uncertainty to the both sides
             minv = distv.min() / 2
             lamb = -(log(0.01))/fuzzy_plus_span  # lambda parameter for exponential distribution that covers 99% probabilty mass
 
@@ -164,5 +164,5 @@ class InexactDate:
 
 if __name__ == '__main__':
     # test
-    dayd, dayf = InexactDate('date', 1066, 10, 1).fset
+    dayd, dayf = InexactDate('date', 1066, 10, 1, certainty=0.3).fset
     print(len(dayf))
