@@ -113,13 +113,11 @@ class InexactDate:
             year_from, month_from, day_from = start.year, start.month, start.day
             end = start + timedelta(81)
             year_to, month_to, day_to = end.year, end.month, 22 if end.month == 9 else 20
-
         elif model == 'year':
             if not year_from:
                 raise ValueError('Please specify year')
             year_from, month_from, day_from = year_from, 1, 1
             year_to, month_to, day_to = year_from, 12, 31
-
         elif model == 'decade':
             if not year_from:
                 raise ValueError('Please specify year')
@@ -130,6 +128,8 @@ class InexactDate:
                 raise ValueError('Please specify year')
             year_from, month_from, day_from = (year_from // 100)*100+1, 1, 1
             year_to, month_to, day_to = (year_from // 100)*100+100, 12, 31
+        else:
+            raise NotImplemented
 
         self = object.__new__(cls)
 
@@ -177,24 +177,33 @@ class InexactDate:
 
         distv = dist.pdf(np.linspace(0.01, 0.99, span)) * self._certainty
 
+        # normalisation
+        if distv.max() > 1.:
+            distv = distv / distv.max()
+
         # extend for uncertainty (1-certainty)
         fuzzy_plus_span = 0
         if self._certainty < 1:
             uncertainty = 1 - self._certainty
             # TODO find better span and probability distribution by empirical data
             fuzzy_plus_span = ceil((10 * sqrt(span))/self._certainty)  # extend for uncertainty to the both sides
-            minv = distv.min() / 2
+            minv = distv.min()
             lamb = -(log(0.01))/fuzzy_plus_span  # lambda parameter for exponential distribution that covers 99% probabilty mass
 
             expf = lambda x: lamb*exp(-1*lamb*x)
-            distvf = np.array(list(map(expf, [a+0.5 for a in range(fuzzy_plus_span)]))) # middle values for a crude aprox to sum to 1
-            distvf = distvf / sum(distvf)
-            distvf = distvf * (uncertainty/2)
 
             # expand fuzzy_plus_span if the largest value if greater then the minimal value in distribution
+            distvf = [100.]
+            num_extend = 0
+            # TODO solve tail extension for skewed intervals
             while distvf[0] > minv:
-                fuzzy_plus_span = round(fuzzy_plus_span*1.5)
-                distvf = np.reciprocal(np.exp(np.linspace(0, 5, fuzzy_plus_span)))
+                distvf = np.array(list(map(expf, [a + 0.5 for a in range(
+                    fuzzy_plus_span)])))  # middle values for a crude aprox to sum to 1
+                distvf = distvf / sum(distvf)
+                distvf = distvf * (uncertainty / 2)
+                num_extend += 1
+                if num_extend > 4:
+                    break
 
         self._fset = np.zeros((span+2*fuzzy_plus_span))
         self._fset[fuzzy_plus_span:fuzzy_plus_span+span] = distv
@@ -207,5 +216,5 @@ class InexactDate:
 
 if __name__ == '__main__':
     # test
-    dayd, dayf = InexactDate('date', 1066, 10, 1, certainty=0.3).fset
+    dayd, dayf = InexactDate('year', 1066, qualification='end', certainty=0.3).fset
     print(len(dayf))
