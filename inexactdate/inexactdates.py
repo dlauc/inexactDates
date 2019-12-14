@@ -200,9 +200,9 @@ class InexactDate:
             elif self._inferred_model ==  'DOB_father':
                 dist = stats.beta(9.3, 7)
             elif self._inferred_model ==  'DOB_baptized':
-                dist = stats.beta(9.3, 7)
+                dist = stats.beta(6, 2)
             elif self._inferred_model ==  'DOB_DOD':
-                dist = stats.beta(9.3, 7)
+                dist = stats.beta(8, 15)
             else:
                 raise ValueError('Unknown inferred model')
 
