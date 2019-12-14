@@ -20,6 +20,13 @@ date_model = {
     'inferred',  # inferred date e.g. DOB of a person who become mother on some date
 }
 
+date_inferred = {
+    'DOB_mother' : 60*365, # DOB of person that became mother at date
+    'DOB_father': 90*365, # DOB of person that became father at date
+    'DOB_baptized': 365, # DOB of person that has been baptised at the date
+    'DOB_DOD': 120*365, # DOB of person that has died at the date
+}
+
 # the most frequent models for modifying
 # for others use 'precalculated' date model and provide the set
 date_qualification = {
@@ -57,12 +64,12 @@ class InexactDate:
     model, expressed_range, intended_range, certainty
     """
     __slots__ = '_year_from', '_month_from', '_day_from', '_year_to', '_month_to', '_day_to', \
-                '_model', '_qualification', '_intended_range', '_certainty', \
+                '_model', '_qualification', '_intended_range', '_certainty', '_inferred_model', \
                 '_fset', '_first_nonnull_date', \
                 '_hashcode'
 
     def __new__(cls, model, year_from, month_from=None, day_from=None, year_to=None, month_to=None, day_to=None,
-                qualification=None, intended_range=1, certainty=0.9, inferred=None):
+                qualification=None, intended_range=1, certainty=0.9, inferred_model=None):
 
         """Constructor.
 
@@ -128,6 +135,16 @@ class InexactDate:
                 raise ValueError('Please specify year')
             year_from, month_from, day_from = (year_from // 100)*100+1, 1, 1
             year_to, month_to, day_to = (year_from // 100)*100+100, 12, 31
+        elif model == 'inferred':
+            if not inferred_model or inferred_model not in date_inferred.keys():
+                raise ValueError('Please specify model for inferring: '+', '.join(date_inferred.keys()))
+            if not year_from:
+                raise ValueError('Please specify year (and optionally month and day')
+            year_to = year_from  # infer to the past
+            month_to = month_from if month_from else 6
+            day_to = day_from if day_from else 15
+            d = datetime(year_to, month_to, day_to) - timedelta(date_inferred[inferred_model])
+            year_from, month_from, day_from = d.year, d.month, d.day
         else:
             raise NotImplemented
 
@@ -139,6 +156,7 @@ class InexactDate:
         self._qualification = qualification
         self._certainty = certainty
         self._model = model
+        self._inferred_model = inferred_model
         self._intended_range = intended_range
 
         if model != 'precalculated':
@@ -164,16 +182,29 @@ class InexactDate:
         last_day = datetime(self._year_to, self._month_to, self._day_to)
         span = (last_day-first_day).days + 1  # inclusive boundary
 
-        if not self._qualification:  # uniform
-            dist = stats.uniform
-        elif self._qualification == 'start':
-            dist = stats.beta(1, 3)
-        elif self._qualification == 'end':
-            dist = stats.beta(3, 1)
-        elif self._qualification == 'mid':
-            dist = stats.beta(5, 5)
+        if not self._inferred_model:
+            if not self._qualification:  # uniform
+                dist = stats.uniform
+            elif self._qualification == 'start':
+                dist = stats.beta(1, 3)
+            elif self._qualification == 'end':
+                dist = stats.beta(3, 1)
+            elif self._qualification == 'mid':
+                dist = stats.beta(5, 5)
+            else:
+                raise ValueError('Unknown qualification')
         else:
-            raise ValueError('Unknown qualification')
+            # TODO - find better empirical distribution
+            if self._inferred_model ==  'DOB_mother':
+                dist = stats.beta(9.3, 7)
+            elif self._inferred_model ==  'DOB_father':
+                dist = stats.beta(9.3, 7)
+            elif self._inferred_model ==  'DOB_baptized':
+                dist = stats.beta(9.3, 7)
+            elif self._inferred_model ==  'DOB_DOD':
+                dist = stats.beta(9.3, 7)
+            else:
+                raise ValueError('Unknown inferred model')
 
         distv = dist.pdf(np.linspace(0.01, 0.99, span)) * self._certainty
 
