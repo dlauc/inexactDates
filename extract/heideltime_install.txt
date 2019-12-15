@@ -1,0 +1,25 @@
+sudo apt-get update && sudo apt-get -y install openjdk-8-jdk git maven wget
+sudo mkdir /srv/app
+sudo chown davor_terralogix_ai /srv -R
+
+mkdir /srv/app/treetagger
+cd /srv/app/treetagger
+wget https://www.cis.uni-muenchen.de/~schmid/tools/TreeTagger/data/tree-tagger-linux-3.2.2.tar.gz
+wget https://www.cis.uni-muenchen.de/~schmid/tools/TreeTagger/data/tagger-scripts.tar.gz
+wget https://www.cis.uni-muenchen.de/~schmid/tools/TreeTagger/data/install-tagger.sh
+wget https://www.cis.uni-muenchen.de/~schmid/tools/TreeTagger/data/english.par.gz
+wget https://www.cis.uni-muenchen.de/~schmid/tools/TreeTagger/data/german.par.gz
+sh install-tagger.sh
+
+cd /srv/app
+git clone https://github.com/HeidelTime/heideltime.git
+cp heideltime/conf/config.props .
+sed -i 's|^treeTaggerHome =.*$|treeTaggerHome = /srv/app/treetagger|g' config.props
+
+cd /srv/app/heideltime
+export JAVA_HOME=/usr/lib/jvm/java-8-openjdk-amd64/
+sed -i 's|<scope>provided</scope>||g' pom.xml
+mvn clean package
+
+echo '#!/bin/bash \n\ java -jar /srv/app/heideltime/target/de.unihd.dbs.heideltime.standalone.jar -c /srv/app/config.props "$@" \n\' | sudo tee /bin/heideltime  
+sudo chmod a+x /bin/heideltime
