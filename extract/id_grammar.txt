@@ -1,4 +1,4 @@
-
+# STOLJEĆA
 S[NORM=?n,QUAL=?q] -> STOLJ[NORM=?n,QUAL=?q] 
 CENT -> 'century'|'cent.'|'c.'
 AD -> 'AD'|'CE'|'A.D.'|'C.E.'
